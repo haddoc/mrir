@@ -5,7 +5,7 @@ import numpy as np
 from pynufft import NUFFT_cpu
 
 
-class NuFFT(object):
+class NFFT(object):
 
     def __init__(self, k_coords=None, image_size=None):
         """Initialize the transforms"""
