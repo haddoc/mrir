@@ -2,3 +2,5 @@
 *.pyc
 
 notebooks/.ipynb_checkpoints/
+
+.vscode/

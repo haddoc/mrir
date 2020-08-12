@@ -7,14 +7,14 @@ from pynufft import NUFFT_cpu
 
 class NFFT(object):
 
-    def __init__(self, k_coords=None, image_size=None):
+    def __init__(self, k_coords=None, image_size=None, n_channels=None):
         """Initialize the transforms"""
         kernel_size = (6, 6)  # interpolation size
         image_size = np.array(image_size, dtype=int)
         k_coords = np.array(k_coords, dtype=float)
         kspace_size = (1.5 * image_size).astype(int)
         self.nufft_obj = NUFFT_cpu()
-        self.nufft_obj.plan(k_coords, tuple(image_size), tuple(kspace_size), kernel_size)
+        self.nufft_obj.plan(k_coords, tuple(image_size), tuple(kspace_size), kernel_size, batch=n_channels)
 
     def compute_density(self, samples_2d=None):
         """Compute the sampling density of a nonuniform 2D sampling"""
@@ -26,5 +26,4 @@ class NFFT(object):
 
     def adjoint(self, data_in):
         """Transform nonuniform-sample data from k-space to image space"""
-        self.nufft_obj.xx2x
         return self.nufft_obj.adjoint(data_in)
