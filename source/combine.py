@@ -19,24 +19,27 @@ class CoilCombo(object):
         self.matrix_size = kwargs.get("matrix_size")
         # Noise data used for prewhitening
         self.noise_data = kwargs.get("noise_data")
-        self.noise_cov = None
+        self.cov_noise = None
         self.prewhite_transform = None
 
-    def compute_prewhite(self):
+    def compute_prewhite(self, data_in):
         """Derive the prewhitening matrix and apply it to data"""
-        if self.noise_data is None:
+        if data_in is None:
+            self.cov_noise = None
+            self.prewhite_transform = None
             return
-        n_line, n_coil, n_read = self.noise_data.shape
-        data_coil = np.transpose(self.noise_data, [0, 2, 1])
+        n_line, n_coil, n_read = data_in.shape
+        data_coil = np.transpose(data_in, [0, 2, 1])
         data_coil = np.reshape(data_coil, [n_line * n_read, n_coil])
         cov_mat = np.dot(np.conj(data_coil.T), data_coil)
         # Use a Cholesky matrix for a efficient inverse.
-        self.noise_cov = cov_mat
+        self.cov_noise = cov_mat
         self.prewhite_transform = np.linalg.inv(np.linalg.cholesky(cov_mat))
 
-    def compute_b1(self, data_in):
+    def compute_b1(self, data_in, cov_noise=None):
         """Extract complex coil sensitivity maps from data
         :arg data_in of dimensions (nx, ny, nz, nc) with nc number of channels
+        :kwarg cov_noise: covariance matrix of noise-only data
         """
         size_patch = np.array([4, 4, 4])
         if self.size_patch is not None:
@@ -46,9 +49,8 @@ class CoilCombo(object):
         n_patch = np.ceil(size_im / size_patch).astype(int)
         n_channel = data_in.shape[-1]
         # Get the noise covariance
-        if self.noise_cov is None:
-            self.noise_cov = np.eye(n_channel)
-        print(self.noise_cov)
+        if cov_noise is None:
+            cov_noise = np.eye(n_channel)
         # rephase data using coil complex average
         mean_phase = np.angle(np.mean(data_coil, axis=-1))
         data_coil = data_coil * np.exp(-1j * np.tile(mean_phase[..., np.newaxis], [1, 1, 1, n_channel]))
@@ -69,14 +71,14 @@ class CoilCombo(object):
         print("Size of patchy data {}".format(data_patch.shape))
         # Compute matched filter in each patch
         b1_patch = np.zeros(np.hstack((n_patch, n_channel)), dtype=np.complex64)
-        noise_cov_inv = np.linalg.inv(self.noise_cov)
+        cov_noise_inv = np.linalg.inv(cov_noise)
         for ix, iy, iz in itertools.product(range(n_patch[0]), range(n_patch[1]), range(n_patch[2])):
             im_patch = np.squeeze(data_patch[ix, iy, iz, ...])
             im_patch = np.reshape(im_patch, (np.prod(size_patch), n_channel))
-            sig_cov = np.dot(im_patch.T, np.conj(im_patch))
-            eig_values, eig_basis = np.linalg.eig(np.dot(noise_cov_inv, sig_cov))
+            cov_signal = np.dot(im_patch.T, np.conj(im_patch))
+            eig_values, eig_basis = np.linalg.eig(np.dot(cov_noise_inv, cov_signal))
             m_opt = eig_basis[:, np.argmax(np.abs(eig_values))]
-            m_opt /= np.sqrt(np.dot(np.conj(m_opt).T, np.dot(noise_cov_inv, m_opt)))
+            m_opt /= np.sqrt(np.dot(np.conj(m_opt).T, np.dot(cov_noise_inv, m_opt)))
             b1_patch[ix, iy, iz, :] = m_opt
         # Interpolate patch b1 to image size
         print("interpolate to initial size")
@@ -91,7 +93,7 @@ class CoilCombo(object):
             b1_map[..., ch] = interpolate.interpn(samples, b1_patch[..., ch], interp_points, 'nearest')
         self.b1_map = b1_map
 
-    def forward(self, data_in, flag_prewhite=False, mode='adaptive'):
+    def forward(self, data_in, data_noise=None, flag_prewhite=False, mode='adaptive'):
         """Transform multi-channel data into single image data
         :arg data_in: array of multi-channel 3D data (nx, ny, nz, nc)
         :kwarg flag_prewhite: if True, apply the prewhitening transform to data prior to combining
@@ -101,20 +103,18 @@ class CoilCombo(object):
         assert (data_in.ndim == 4)
         data_coil = data_in.copy()
         nx, ny, nz, nc = data_in.shape
-        if flag_prewhite:
-            self.compute_prewhite()
-        else:
-            self.noise_cov = None
-            # assert (self.prewhite_transform is not None)
-            # data_coil = np.reshape(data_coil, [nx * ny * nz, nc])
-            # data_coil = np.dot(data_coil, self.prewhite_transform)
-            # data_coil = np.reshape(data_coil, [nx, ny, nz, nc])
+        self.compute_prewhite(data_noise)
+        if flag_prewhite and self.prewhite_transform is not None:
+            data_coil = np.reshape(data_coil, [nx * ny * nz, nc])
+            data_coil = np.dot(data_coil, self.prewhite_transform)
+            data_coil = np.reshape(data_coil, [nx, ny, nz, nc])
+            self.cov_noise = None  # we don't want to apply prewhitening during combine step
 
         # Sum of square combo
         if mode == 'SoS':
             im_combo = np.sqrt(np.sum(np.abs(data_coil) ** 2, axis=-1))
         else:
-            self.compute_b1(data_coil)
+            self.compute_b1(data_coil, cov_noise=self.cov_noise)
             assert (self.b1_map is not None)
             im_combo = np.sum(np.conj(self.b1_map) * data_coil, axis=-1)
         return im_combo
