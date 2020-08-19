@@ -12,14 +12,14 @@ class InterferenceReject(object):
         self.flag_use_prescan = kwargs.get("use_prescan", False)
         # Are we using k-space weighting for computing coefficients
         self.flag_use_weights = kwargs.get("use_weights", False)
-        # How many channels in the NMR coil array
-        self.num_channels_signal = kwargs.get("channels_signal", 1)
-        # How many total channels in the ADC
-        self.num_channels_all = kwargs.get("channels_all", 16)
+        # Selection index for NMR channels (list type)
+        self.channels_signal = kwargs.get("channels_signal")
+        # Selection index for Reference channels (list type)
+        self.channels_noise = kwargs.get("channels_noise")
         # Initialize attributes
         self.k_weights = None
 
-    def compute_weights(self, num_readout_points=None):
+    def compute_weights(self, num_readout_points=None, num_channels=None):
         """Compute the k-space data weighting"""
         if self.k_coords is None or num_readout_points is None:
             return
@@ -32,7 +32,7 @@ class InterferenceReject(object):
         # Combine all weights
         weights_all = np.dot(weight_readout[:, np.newaxis], weight_coords[:, np.newaxis].T)
         # Add multi-channel dimension to weights (identical weights on all channels)
-        weights_all = np.tile(weights_all[:, :, np.newaxis], self.num_channels_all)
+        weights_all = np.tile(weights_all[:, :, np.newaxis], num_channels)
         # Set the weights as dimensions (lines, channels, readout)
         self.k_weights = np.transpose(weights_all, [1, 2, 0])
 
@@ -48,7 +48,7 @@ class InterferenceReject(object):
         # Compute encoding weights
         if k_coords is not None:
             self.k_coords = k_coords
-            self.compute_weights(num_readout_points=scan_raw.shape[-1])
+            self.compute_weights(num_readout_points=scan_raw.shape[2], num_channels=scan_raw.shape[1])
         # Get scan data to spectral domain
         spec_scan = np.fft.fft(scan_raw, axis=-1)
         
@@ -67,18 +67,14 @@ class InterferenceReject(object):
         else:
             coeff_all = self.compute_coeffs(spec_scan)
         
-        # Selection indices for signal channels and reference channels
-        sel_chan_sig = slice(self.num_channels_signal)
-        sel_chan_ref = slice(self.num_channels_signal, self.num_channels_all)
-
         # Perform rejection
         num_freq_bins = spec_scan.shape[-1]
-        ndims_corrected = list(spec_scan.shape)
-        ndims_corrected[1] = self.num_channels_signal
-        spec_cor = np.zeros(ndims_corrected, dtype=np.complex64)
+        ndims_output = list(spec_scan.shape)
+        ndims_output[1] = len(self.channels_signal)
+        spec_cor = np.zeros(ndims_output, dtype=np.complex64)
         for _f in range(num_freq_bins):
-            sig = spec_scan[:, sel_chan_sig, _f]
-            ref = spec_scan[:, sel_chan_ref, _f]
+            sig = spec_scan[:, self.channels_signal, _f]
+            ref = spec_scan[:, self.channels_noise, _f]
             spec_cor[:, :, _f] = sig - np.dot(ref, coeff_all[:, :, _f])
 
         data_cor = np.fft.ifft(spec_cor, axis=-1)
@@ -86,14 +82,11 @@ class InterferenceReject(object):
 
     def compute_coeffs(self, cal_data):
         """Compute the correction coefficients for each frequency"""
-        num_channels_noise = self.num_channels_all - self.num_channels_signal
         num_freq_bins = cal_data.shape[-1]
-        coeff_all = np.zeros((self.num_channels_signal, num_channels_noise, num_freq_bins), dtype=np.complex64)
-        sel_chan_sig = slice(self.num_channels_signal)
-        sel_chan_ref = slice(self.num_channels_signal, self.num_channels_all)
+        coeff_all = np.zeros((len(self.channels_noise), len(self.channels_signal), num_freq_bins), dtype=np.complex64)
         for _f in range(num_freq_bins):
-            cal_sig = cal_data[:, sel_chan_sig, _f]
-            cal_ref = cal_data[:, sel_chan_ref, _f]
+            cal_sig = cal_data[:, self.channels_signal, _f]
+            cal_ref = cal_data[:, self.channels_noise, _f]
             coeff = np.linalg.lstsq(cal_ref, cal_sig, rcond=-1)[0]
             coeff_all[:, :, _f] = coeff
         return coeff_all

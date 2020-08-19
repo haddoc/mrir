@@ -41,7 +41,7 @@ class CoilCombo(object):
         :arg data_in of dimensions (nx, ny, nz, nc) with nc number of channels
         :kwarg cov_noise: covariance matrix of noise-only data
         """
-        size_patch = np.array([4, 4, 4])
+        size_patch = np.array([8, 8, 4])
         if self.size_patch is not None:
             size_patch = np.array(self.size_patch)
         data_coil = data_in.copy()
@@ -68,7 +68,6 @@ class CoilCombo(object):
             data_coil, 
             (n_patch[0], size_patch[0], n_patch[1], size_patch[1], n_patch[2], size_patch[2], n_channel))
         data_patch = np.transpose(data_patch, (0, 2, 4, 1, 3, 5, 6))
-        print("Size of patchy data {}".format(data_patch.shape))
         # Compute matched filter in each patch
         b1_patch = np.zeros(np.hstack((n_patch, n_channel)), dtype=np.complex64)
         cov_noise_inv = np.linalg.inv(cov_noise)
@@ -81,7 +80,6 @@ class CoilCombo(object):
             m_opt /= np.sqrt(np.dot(np.conj(m_opt).T, np.dot(cov_noise_inv, m_opt)))
             b1_patch[ix, iy, iz, :] = m_opt
         # Interpolate patch b1 to image size
-        print("interpolate to initial size")
         samples = [np.linspace(0, 1, _n) for _n in n_patch]
         interp_points = np.mgrid[
             0:1:(size_im[0] * 1j),
@@ -125,6 +123,6 @@ if __name__ == "__main__":
     comb = CoilCombo(matrix_size=im_4d.shape[:-1])
     im_3d = comb.forward(im_4d)
     import matplotlib.pyplot as plt
-    plt.imshow(np.abs(im_3d[:,:,12]), cmap='gray')
+    plt.imshow(np.abs(im_3d[:,:,20]), cmap='gray')
     # plt.imshow(np.abs(comb.b1_map[:,:,17,3]), cmap='gray')
     plt.show()

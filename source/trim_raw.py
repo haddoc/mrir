@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import os
 import json
@@ -22,7 +23,6 @@ def trim_dataset(file_name=None):
         index_scan[_k] = np.array(_v)[set_echo==0].tolist()
     # save dataset 0
     ds2['data/0/lines'] = data_scan
-    ds2['data/0/index'] = index_scan
     ds2['data/0/index'] = json.dumps(index_scan)
     # save dataset 1
     ds2['data/1/lines'] = ds['data/1/lines'][()]
@@ -32,6 +32,6 @@ def trim_dataset(file_name=None):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Must specify file path")
-        return
+        sys.exit(1)
     fname = sys.argv[1]
     trim_dataset(file_name=fname)
