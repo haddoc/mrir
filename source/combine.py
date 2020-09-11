@@ -104,7 +104,7 @@ class CoilCombo(object):
         self.compute_prewhite(data_noise)
         if flag_prewhite and self.prewhite_transform is not None:
             data_coil = np.reshape(data_coil, [nx * ny * nz, nc])
-            data_coil = np.dot(data_coil, self.prewhite_transform)
+            data_coil = np.dot(data_coil, self.prewhite_transform.T)
             data_coil = np.reshape(data_coil, [nx, ny, nz, nc])
             self.cov_noise = None  # we don't want to apply prewhitening during combine step
 
