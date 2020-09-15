@@ -6,7 +6,7 @@ import numpy as np
 
 def read_raw(file_name=None):
     """Import a raw data file and return metadata and raw datasets"""
-    if not os.path.isfile(file_name) or not os.path.splitext(file_name)[-1] == '.h5':
+    if not os.path.isfile(file_name) or os.path.splitext(file_name)[-1] != '.h5':
         print("'{}' is not a valid raw file".format(file_name))
         raise FileNotFoundError
     try:
