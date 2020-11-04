@@ -2,7 +2,7 @@ import numpy as np
 import scipy.signal as sps
 
 
-def compute_welch(data_time, bandwidth, dim_channel):
+def compute_welch(data_time, bandwidth, dim_channel, nperseg=None):
     """Compute power spectrum using welch method
     :arg data_time: n-dimension array of time domain data
     :arg bandwidth: acquisition bandwidth (float)
@@ -18,13 +18,13 @@ def compute_welch(data_time, bandwidth, dim_channel):
     data_channel = np.transpose(data_time, dims_new)
     data_channel = np.reshape(data_channel, (shape_channel[0], np.prod(shape_channel[1:])))
     # dummy run to get dimensions of power spectrum
-    _, noise_power = sps.welch(data_channel[0, :], fs=bandwidth, return_onesided=False)
+    _, noise_power = sps.welch(data_channel[0, :], fs=bandwidth, return_onesided=False, nperseg=nperseg)
     noise_power = noise_power[1:-1]
     # Get spectrum for all channels
     power_spectrum = np.zeros((data_channel.shape[0], noise_power.size))
     for _ch in range(data_channel.shape[0]):
         # Complex data: one-sided
-        axis_freq, noise_power = sps.welch(data_channel[_ch, :], fs=bandwidth, return_onesided=False)
+        axis_freq, noise_power = sps.welch(data_channel[_ch, :], fs=bandwidth, return_onesided=False, nperseg=nperseg)
         # remove edge samples (filter effect)
         axis_freq = axis_freq[1:-1]
         noise_power = noise_power[1:-1]
@@ -35,6 +35,13 @@ def compute_welch(data_time, bandwidth, dim_channel):
         power_spectrum[_ch, :] = noise_power
 
     return axis_freq, power_spectrum
+
+
+def compute_power_spectrum(data_time, bandwidth, axis_readout, axis_line):
+    data_spec = np.fft.fftshift(np.fft.fft(data_time, axis=axis_readout), axes=axis_readout)
+    power_spectrum = np.squeeze(np.std(data_spec, axis=axis_line))
+    coords_freq = np.linspace(-0.5, 0.5, data_time.shape[axis_readout]) * bandwidth
+    return coords_freq, power_spectrum
 
 
 def compute_kspace_weights(k_coords=None, n_readout=None, n_channels=None, threshold=None):
