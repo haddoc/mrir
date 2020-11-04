@@ -4,12 +4,15 @@ channels:
   - spyder-ide
   - defaults
 dependencies:
+  - pip
   - jupyterlab
   - ipykernel
   - numpy
+  - scipy
   - matplotlib
+  - h5py
   - plotly
   - pip:
     - pynufft
-prefix: /Users/had-mr/anaconda/envs/mrir
+prefix: ~/anaconda/envs/mrir
 
