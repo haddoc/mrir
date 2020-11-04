@@ -15,10 +15,11 @@ def trim_new_dataset(h5_old, h5_file):
     h5_file.create_group('data/1')
     # only keep echo 0
     index_scan = json.loads(h5_old['data/0/index'][()])
-    set_echo = np.array(index_scan['set_echo'])
-    data_scan = h5_old['data/0/lines'][set_echo==0, :, :]
-    for _k, _v in index_scan.items():
-        index_scan[_k] = np.array(_v)[set_echo==0].tolist()
+    if 'set_echo' in index_scan and np.max(np.abs(np.diff(index_scan['set_echo']))) > 0:
+        set_echo = np.array(index_scan['set_echo'])
+        data_scan = h5_old['data/0/lines'][set_echo==0, :, :]
+        for _k, _v in index_scan.items():
+            index_scan[_k] = np.array(_v)[set_echo==0].tolist()
     # save dataset 0
     h5_file['data/0/lines'] = data_scan
     h5_file['data/0/index'] = json.dumps(index_scan)
@@ -42,7 +43,7 @@ def trim_old_dataset(data_dict, h5_file):
     data_time = np.fft.ifft(np.fft.ifftshift(data_dict['data']['freq_domain'], axes=-1), axis=-1)
     extra_points = dict_meta['sequence']['readout']['readouts'][0]['extrapoints']
     matrix_size = dict_meta['sequence']['readout']['readouts'][0]['matrix']
-    data_time = data_time[:, :, :(2 * extra_points + matrix_size)]
+    data_time = data_time[:, :, extra_points:(-extra_points + matrix_size)]
     print(data_time.shape)
     # Get the imaging group from index
     index_all = data_dict['seqdata']['recon']['line_index']
