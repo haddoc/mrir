@@ -2,45 +2,22 @@ import numpy as np
 import scipy.signal as sps
 
 
-def compute_welch(data_time, bandwidth, dim_channel, nperseg=None):
-    """Compute power spectrum using welch method
-    :arg data_time: n-dimension array of time domain data
-    :arg bandwidth: acquisition bandwidth (float)
-    :arg dim_channel: which dimension the power spectrum is computed on
-    """
-    shape_data = list(data_time.shape)
-    shape_channel = [shape_data[dim_channel]]
-    dims_new = [dim_channel]
-    for _i, _d in enumerate(shape_data):
-        if _i != dim_channel:
-            shape_channel.append(_d)
-            dims_new.append(_i)
-    data_channel = np.transpose(data_time, dims_new)
-    data_channel = np.reshape(data_channel, (shape_channel[0], np.prod(shape_channel[1:])))
-    # dummy run to get dimensions of power spectrum
-    _, noise_power = sps.welch(data_channel[0, :], fs=bandwidth, return_onesided=False, nperseg=nperseg)
-    noise_power = noise_power[1:-1]
-    # Get spectrum for all channels
-    power_spectrum = np.zeros((data_channel.shape[0], noise_power.size))
-    for _ch in range(data_channel.shape[0]):
-        # Complex data: one-sided
-        axis_freq, noise_power = sps.welch(data_channel[_ch, :], fs=bandwidth, return_onesided=False, nperseg=nperseg)
-        # remove edge samples (filter effect)
-        axis_freq = axis_freq[1:-1]
-        noise_power = noise_power[1:-1]
-        # Sort in incremental axis_frequency
-        idx_sort = np.argsort(axis_freq)
-        axis_freq = axis_freq[idx_sort]
-        noise_power = noise_power[idx_sort]
-        power_spectrum[_ch, :] = noise_power
-
-    return axis_freq, power_spectrum
-
-
-def compute_power_spectrum(data_time, bandwidth, axis_readout, axis_line):
-    data_spec = np.fft.fftshift(np.fft.fft(data_time, axis=axis_readout), axes=axis_readout)
-    power_spectrum = np.squeeze(np.std(data_spec, axis=axis_line))
-    coords_freq = np.linspace(-0.5, 0.5, data_time.shape[axis_readout]) * bandwidth
+def compute_spectrogram(data_time, bandwidth):
+    n_channel, n_read, n_lines = data_time.shape
+    # Dummy run to get spectrogram size
+    coords_freq, spec_0 = sps.welch(data_time[0,:,0], fs=bandwidth, return_onesided=False)
+    reord = np.argsort(coords_freq)
+    coords_freq = coords_freq[reord]
+    # Compute spectrogram for each channel and line
+    power_spectrum = np.zeros((n_channel, spec_0.size, n_lines))
+    for _i in range(n_lines):
+        for _ch in range(n_channel):
+            _, spec = sps.welch(data_time[_ch,:,_i], fs=bandwidth, return_onesided=False)
+            power_spectrum[_ch,:,_i] = spec[reord]
+    power_spectrum = np.squeeze(np.mean(power_spectrum, axis=-1))
+    # remove 0 frequency (filter artifact)
+    power_spectrum = power_spectrum[:, coords_freq != 0]
+    coords_freq = coords_freq[coords_freq != 0]
     return coords_freq, power_spectrum
 
 
