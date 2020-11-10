@@ -45,5 +45,5 @@ def compute_kspace_weights(k_coords=None, n_readout=None, n_channels=None, thres
     # Add multi-channel dimension to weights (identical weights on all channels)
     weights_all = np.tile(weights_all[:, :, np.newaxis], n_channels)
     # Set the weights as dimensions (lines, channels, readout)
-    k_weights = np.transpose(weights_all, [1, 2, 0])
+    k_weights = np.transpose(weights_all, [2, 0, 1])
     return k_weights

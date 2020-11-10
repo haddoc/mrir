@@ -28,10 +28,9 @@ class CoilCombo(object):
             self.cov_noise = None
             self.prewhite_transform = None
             return
-        n_line, n_coil, n_read = data_in.shape
-        data_coil = np.transpose(data_in, [0, 2, 1])
-        data_coil = np.reshape(data_coil, [n_line * n_read, n_coil])
-        cov_mat = np.dot(np.conj(data_coil.T), data_coil)
+        n_coil, n_read, n_line = data_in.shape
+        data_coil = np.reshape(data_in, [n_coil, n_line * n_read])
+        cov_mat = np.dot(np.conj(data_coil), data_coil.T)
         # Use a Cholesky matrix for a efficient inverse.
         self.cov_noise = cov_mat
         self.prewhite_transform = np.linalg.inv(np.linalg.cholesky(cov_mat))

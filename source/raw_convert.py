@@ -43,8 +43,7 @@ def trim_old_dataset(data_dict, h5_file):
     data_time = np.fft.ifft(np.fft.ifftshift(data_dict['data']['freq_domain'], axes=-1), axis=-1)
     extra_points = dict_meta['sequence']['readout']['readouts'][0]['extrapoints']
     matrix_size = dict_meta['sequence']['readout']['readouts'][0]['matrix']
-    data_time = data_time[:, :, extra_points:(-extra_points + matrix_size)]
-    print(data_time.shape)
+    data_time = data_time[:, :, extra_points:(extra_points + matrix_size)]
     # Get the imaging group from index
     index_all = data_dict['seqdata']['recon']['line_index']
     sel_0 = np.array(index_all['group']) == 0
@@ -53,6 +52,7 @@ def trim_old_dataset(data_dict, h5_file):
     # only keep echo 0
     sel_echo = index_scan['set_echo'] == 0
     data_scan = data_scan[sel_echo, :, :]
+    data_scan = np.transpose(data_scan, (1, 2, 0))
     index_scan = {_k: _v[sel_echo].tolist() for _k, _v in index_scan.items()}
     # save dataset 0
     h5_file['data/0/lines'] = data_scan
@@ -61,6 +61,7 @@ def trim_old_dataset(data_dict, h5_file):
     sel_1 = np.array(index_all['group']) == 1
     index_prescan = {_k: np.array(_v)[sel_1].tolist() for _k, _v in index_all.items()}
     data_prescan = data_time[sel_1, :, :]
+    data_prescan = np.transpose(data_prescan, (1, 2, 0))
     h5_file['data/1/lines'] = data_prescan
     h5_file['data/1/index'] = json.dumps(index_prescan)
 
