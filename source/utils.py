@@ -5,19 +5,16 @@ import scipy.signal as sps
 def compute_spectrogram(data_time, bandwidth):
     n_channel, n_read, n_lines = data_time.shape
     # Dummy run to get spectrogram size
-    coords_freq, spec_0 = sps.welch(data_time[0,:,0], fs=bandwidth, return_onesided=False)
+    coords_freq, spec_0 = sps.welch(data_time[0,:,0], fs=bandwidth, return_onesided=False, detrend=False)
     reord = np.argsort(coords_freq)
     coords_freq = coords_freq[reord]
     # Compute spectrogram for each channel and line
     power_spectrum = np.zeros((n_channel, spec_0.size, n_lines))
     for _i in range(n_lines):
         for _ch in range(n_channel):
-            _, spec = sps.welch(data_time[_ch,:,_i], fs=bandwidth, return_onesided=False)
+            _, spec = sps.welch(data_time[_ch,:,_i], fs=bandwidth, return_onesided=False, detrend=False)
             power_spectrum[_ch,:,_i] = spec[reord]
     power_spectrum = np.squeeze(np.mean(power_spectrum, axis=-1))
-    # remove 0 frequency (filter artifact)
-    power_spectrum = power_spectrum[:, coords_freq != 0]
-    coords_freq = coords_freq[coords_freq != 0]
     return coords_freq, power_spectrum
 
 
