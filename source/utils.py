@@ -29,14 +29,14 @@ def compute_kspace_weights(k_coords=None, n_readout=None, n_channels=None, thres
     if isinstance(threshold, float):
         weight_readout = np.array(weight_readout > threshold, dtype=float)
     else:
-        weight_readout = 1 - np.exp(-100 * weight_readout ** 2)
+        weight_readout = 1 - np.exp(-5 * weight_readout ** 2)
     # Weight function on line encoding
     k_norm = np.sqrt(np.sum(k_coords ** 2, axis=-1))
     k_norm /= np.max(k_norm)
     if isinstance(threshold, float):
         weight_coords = np.array(k_norm > threshold, dtype=float)
     else:
-        weight_coords = 1 - np.exp(-100 * k_norm ** 2)
+        weight_coords = 1 - np.exp(-5 * k_norm ** 2)
     # Combine all weights
     weights_all = np.dot(weight_readout[:, np.newaxis], weight_coords[:, np.newaxis].T)
     # Add multi-channel dimension to weights (identical weights on all channels)
