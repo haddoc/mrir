@@ -3,6 +3,7 @@ import scipy.signal as sps
 
 
 def compute_spectrogram(data_time, bandwidth):
+    """Compute spectral density for each acquisition, then average along repetitions"""
     n_channel, n_read, n_lines = data_time.shape
     # Dummy run to get spectrogram size
     coords_freq, spec_0 = sps.welch(data_time[0,:,0], fs=bandwidth, return_onesided=False, detrend=False)
@@ -15,6 +16,24 @@ def compute_spectrogram(data_time, bandwidth):
             _, spec = sps.welch(data_time[_ch,:,_i], fs=bandwidth, return_onesided=False, detrend=False)
             power_spectrum[_ch,:,_i] = spec[reord]
     power_spectrum = np.squeeze(np.mean(power_spectrum, axis=-1))
+    return coords_freq, power_spectrum
+
+
+def compute_welch(data_time, bandwidth):
+    """Compute power density along the readout x line dimension"""
+    n_channel = data_time.shape[0]
+    data_coils = np.reshape(data_time, [n_channel, -1])
+    # Remove zero (from masking)
+    data_coils = data_coils[:, np.abs(data_coils[0, :]) > 0]
+    # Dummy to get dimensions and reorder
+    coords_freq, spec_0 = sps.welch(data_coils[0,:], fs=bandwidth, return_onesided=False, detrend=False)
+    reord = np.argsort(coords_freq)
+    coords_freq = coords_freq[reord]
+    # Compute spectrum for each channel
+    power_spectrum = np.zeros((n_channel, spec_0.size))
+    for _ch in range(n_channel):
+        _, spec = sps.welch(data_coils[_ch, :], fs=bandwidth, return_onesided=False, detrend=False)
+        power_spectrum[_ch,:] = spec[reord]
     return coords_freq, power_spectrum
 
 
