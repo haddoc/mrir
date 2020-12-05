@@ -55,14 +55,14 @@ def trim_old_dataset(data_dict, h5_file):
     data_scan = np.transpose(data_scan, (1, 2, 0))
     index_scan = {_k: _v[sel_echo].tolist() for _k, _v in index_scan.items()}
     # save dataset 0
-    h5_file['data/0/lines'] = data_scan
+    h5_file['data/0/lines'] = data_scan.astype(np.complex64)
     h5_file['data/0/index'] = json.dumps(index_scan)
     # save dataset 1
     sel_1 = np.array(index_all['group']) == 1
     index_prescan = {_k: np.array(_v)[sel_1].tolist() for _k, _v in index_all.items()}
     data_prescan = data_time[sel_1, :, :]
     data_prescan = np.transpose(data_prescan, (1, 2, 0))
-    h5_file['data/1/lines'] = data_prescan
+    h5_file['data/1/lines'] = data_prescan.astype(np.complex64)
     h5_file['data/1/index'] = json.dumps(index_prescan)
 
 
