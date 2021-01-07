@@ -13,6 +13,7 @@ dependencies:
   - h5py
   - plotly
   - pip:
-    - pynufft
+    - pynufft==2020.1.0
+    - scipy==1.5.2
 prefix: ~/anaconda/envs/mrir
 
