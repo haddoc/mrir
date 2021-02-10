@@ -1,4 +1,6 @@
 # Get the data repository (needs large file system support)
 git init
 git lfs install
+mkdir data
+cd data
 git clone https://github.com/haddoc/mrir-data.git

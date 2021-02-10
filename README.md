@@ -4,8 +4,6 @@ Algorithms and examples of interference rejection for magnetic resonance data ac
 
 Try it out in Binder notebook: 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/haddoc/mrir/HEAD)
-.. image:: https://mybinder.org/badge_logo.svg
- :target: https://mybinder.org/v2/gh/haddoc/mrir/HEAD
 
 To install locally:
 1) Clone code and data in same directory:
