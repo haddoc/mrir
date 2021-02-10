@@ -1,4 +1,4 @@
-# Get the data repository
-wget https://github.com/haddoc/mrir-data/archive/main.zip
-unzip main.zip
-mv mrir-data-main mrir-data
+# Get the data repository (needs large file system support)
+git init
+git lfs install
+git clone https://github.com/haddoc/mrir-data.git
