@@ -1,0 +1,4 @@
+# Get the data repository
+wget https://github.com/haddoc/mrir-data/archive/main.zip
+unzip main.zip
+mv mrir-data-main mrir-data
